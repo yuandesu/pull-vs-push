@@ -1,18 +1,29 @@
-# Polling vs Webhook — 互動式講解
+# Pull vs Push — 互動式講解
 
-一個用繁體中文製作的互動式視覺化簡報，深入解釋 **Polling（輪詢）** 與 **Webhook** 兩種資料推送架構的差異。
+一個用繁體中文製作的互動式視覺化簡報，說明 **Pull** 與 **Push** 兩種資料傳遞模式的差異，並以 **REST API**（Pull）與 **Webhook**（Push）為具體範例。
 
 ## 線上預覽
 
-[View on GitHub Pages](https://yuandesu.github.io/webhook-vs-api/)
+[View on GitHub Pages](https://yuandesu.github.io/pull-vs-push/)
 
 ## 內容涵蓋
 
-- Polling 運作原理與動畫示意
-- Webhook 運作原理與動畫示意
-- 兩種架構的優缺點比較
-- 實際使用情境說明（以 Datadog 整合為例）
+- Pull vs Push 的概念差異
+- Pull 模式的兩種子類型：On-demand（按需呼叫）vs Polling（定期輪詢）
+- Pull 實作範例：REST API 呼叫流程
+- Push 實作範例：Webhook 事件推送流程
+- 兩種模式的詳細比較表格（即時性、資源消耗、錯誤處理等）
+- Datadog 實戰範例（REST API 查詢 monitor / Webhook 接收 alert）
 - 互動式動畫，逐頁導覽
+
+## 核心概念
+
+| 模式 | 實作範例 | 發起方 | 特性 |
+|------|----------|--------|------|
+| Pull | REST API | 你主動呼叫 | On-demand 或定期 polling |
+| Push | Webhook  | 對方主動 POST | 事件驅動，即時通知 |
+
+> ⚠️ Push（Webhook）不是 API 的相反。Webhook 底層就是透過 HTTP 實現的。真正的差別是**誰主動發起 request**。
 
 ## 技術
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Polling vs Webhook — 互動式講解</title>
+<title>Pull vs Push — 互動式講解</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -365,17 +365,17 @@
 <div class="slide-inner" style="text-align:center;">
   <div class="slide-label">互動式技術講解</div>
   <h1>
-    <span class="highlight-api">Polling</span> vs <span class="highlight-wh">Webhook</span>
+    <span class="highlight-api">Pull</span> vs <span class="highlight-wh">Push</span>
   </h1>
   <p style="font-size:18px; max-width:600px; margin:0 auto;">
-    兩種透過 API 取得資料的模式<br>從基本概念到 Datadog 實戰範例
+    資料傳遞的兩種模式<br>以 REST API（Pull）與 Webhook（Push）為例
   </p>
   <div style="margin-top:30px;">
-    <span class="tag tag-api">PULL — 主動輪詢</span>
-    <span class="tag tag-wh">PUSH — 事件推送</span>
+    <span class="tag tag-api">PULL — REST API 主動呼叫</span>
+    <span class="tag tag-wh">PUSH — Webhook 事件推送</span>
   </div>
   <p style="font-size:13px; margin-top:16px; color:var(--text-dim); max-width:520px; margin-left:auto; margin-right:auto;">
-    ⚠️ Webhook 不是 API 的相反。Webhook 本身就是透過 HTTP API 實現的。<br>
+    ⚠️ Push（Webhook）不是 API 的相反。Webhook 本身就是透過 HTTP 實現的。<br>
     真正的差別是「誰主動發起 request」。
   </p>
   <p style="font-size:13px; margin-top:30px; color:#555;">按右方向鍵 → 或下方按鈕開始</p>
@@ -386,31 +386,31 @@
 <div class="slide" data-slide="1">
 <div class="slide-inner">
   <div class="slide-label">先搞清楚一件事</div>
-  <h2>Webhook ≠ API 的反義詞</h2>
+  <h2>Push（Webhook）≠ API 的反義詞</h2>
   <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; margin:20px 0;">
     <p style="color:var(--text); font-size:16px; line-height:1.8;">
       <span class="highlight-acc">API</span> 是一套介面規範，定義了系統之間如何溝通（透過 HTTP request/response）。<br>
-      <span class="highlight-wh">Webhook</span> 是一種設計模式，讓系統在事件發生時，自動呼叫你預先註冊的 URL。<br><br>
-      Webhook 的實作方式就是發送一個 HTTP POST request — <span class="highlight-acc">它本身就是透過 API 來實現的</span>。<br>
-      所以真正該比較的是：<b>Polling（輪詢）</b> vs <b>Webhook（事件推送）</b>，兩者都使用 API。
+      <span class="highlight-wh">Webhook</span> 是 Push 模式的一種實作方式，讓系統在事件發生時，自動呼叫你預先註冊的 URL。<br><br>
+      Webhook 的底層就是發送一個 HTTP POST request — <span class="highlight-acc">它本身就是透過 HTTP API 來實現的</span>。<br>
+      所以真正該比較的是：<b>Pull（以 REST API 呼叫為例）</b> vs <b>Push（以 Webhook 為例）</b>，底層都是 HTTP。
     </p>
   </div>
   <div class="compare-grid">
     <div class="compare-card api-card">
-      <h3><span class="highlight-api">🔄 Polling（輪詢）</span></h3>
+      <h3><span class="highlight-api">🔄 Pull（REST API）</span></h3>
       <p style="font-size:20px; color:var(--text); font-weight:500; margin:12px 0;">
-        「你主動、重複地去問」
+        「你主動去拿資料」
       </p>
-      <p>你的程式定期呼叫 API 檢查有沒有新資料。<br>像你每 5 分鐘打電話給餐廳問：「外送到了嗎？」</p>
-      <div class="tag tag-api" style="margin-top:14px;">PULL 模式 · 你發起 API call</div>
+      <p>你的程式主動呼叫對方的 REST API 取得資料，可以是 on-demand 或定期 polling。<br>像你打電話給餐廳問：「外送到了嗎？」</p>
+      <div class="tag tag-api" style="margin-top:14px;">PULL 模式 · 你發起 request</div>
     </div>
     <div class="compare-card wh-card">
-      <h3><span class="highlight-wh">🪝 Webhook（事件推送）</span></h3>
+      <h3><span class="highlight-wh">🪝 Push（Webhook）</span></h3>
       <p style="font-size:20px; color:var(--text); font-weight:500; margin:12px 0;">
         「對方主動通知你」
       </p>
       <p>你提供一個 endpoint URL，對方在事件發生時自動 POST 過來。<br>像外送 App 主動推播：「餐點已送達」</p>
-      <div class="tag tag-wh" style="margin-top:14px;">PUSH 模式 · 對方發起 API call</div>
+      <div class="tag tag-wh" style="margin-top:14px;">PUSH 模式 · 對方發起 request</div>
     </div>
   </div>
 
@@ -448,9 +448,9 @@
   <h2 style="margin-bottom:10px;">兩種模式，都是 HTTP API</h2>
 
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-    <!-- LEFT: Polling -->
+    <!-- LEFT: Pull -->
     <div style="background:var(--surface); border:1px solid var(--api-color); border-radius:12px; padding:14px 18px;">
-      <p style="margin-bottom:6px; font-size:14px;"><span class="highlight-api">▎Polling — 你主動呼叫 API</span></p>
+      <p style="margin-bottom:6px; font-size:14px;"><span class="highlight-api">▎Pull — 你主動呼叫 REST API</span></p>
       <div class="diagram" style="margin:6px 0 0;">
         <div class="d-box api-box" style="padding:10px 14px;"><div class="icon" style="font-size:20px;">🖥️</div><div class="label" style="font-size:11px;">你的應用</div></div>
         <div class="d-arrow" style="padding:0 6px; font-size:18px;"><div class="arrow-label" style="color:var(--api-color); font-size:9px;">① Request</div><span style="color:var(--api-color);">→</span></div>
@@ -471,9 +471,9 @@
       </div>
     </div>
 
-    <!-- RIGHT: Webhook -->
+    <!-- RIGHT: Push (Webhook) -->
     <div style="background:var(--surface); border:1px solid var(--webhook-color); border-radius:12px; padding:14px 18px;">
-      <p style="margin-bottom:6px; font-size:14px;"><span class="highlight-wh">▎Webhook — 對方主動呼叫你的 API</span></p>
+      <p style="margin-bottom:6px; font-size:14px;"><span class="highlight-wh">▎Push（Webhook）— 對方主動 POST 到你的 Endpoint</span></p>
       <div class="diagram" style="margin:6px 0 0;">
         <div class="d-box wh-box" style="padding:10px 14px;"><div class="icon" style="font-size:20px;">⚡</div><div class="label" style="font-size:11px;">事件觸發</div></div>
         <div class="d-arrow" style="padding:0 6px; font-size:18px;"><div class="arrow-label" style="color:var(--webhook-color); font-size:9px;">① POST</div><span style="color:var(--webhook-color);">→</span></div>
@@ -496,7 +496,7 @@
 
   <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 18px; margin-top:12px;">
     <p style="font-size:13px; color:var(--text);">
-      💡 兩種模式都有 Request → Response 的完整來回。差別是<span class="highlight-acc">誰主動發起第一個 request</span>：Polling 是你發、Webhook 是對方發。
+      💡 兩種模式都有 Request → Response 的完整來回。差別是<span class="highlight-acc">誰主動發起第一個 request</span>：Pull（REST API）是你發、Push（Webhook）是對方發。
     </p>
   </div>
 </div>
@@ -506,19 +506,19 @@
 <div class="slide" data-slide="3">
 <div class="slide-inner">
   <div class="slide-label">詳細比較</div>
-  <h2>Polling vs Webhook 差異一覽</h2>
+  <h2>Pull vs Push 差異一覽</h2>
   <table class="comp-table">
     <thead>
-      <tr><th style="width:18%;">面向</th><th class="th-api" style="width:41%;">🔄 Polling（主動輪詢 API）</th><th class="th-wh">🪝 Webhook（事件推送）</th></tr>
+      <tr><th style="width:18%;">面向</th><th class="th-api" style="width:41%;">🔄 Pull（REST API 呼叫）</th><th class="th-wh">🪝 Push（Webhook）</th></tr>
     </thead>
     <tbody>
-      <tr><td><b>誰發起 request</b></td><td>你的程式主動 call API</td><td>對方系統主動 POST 到你的 endpoint</td></tr>
-      <tr><td><b>通訊方向</b></td><td>你 → 對方 API（Request/Response）</td><td>對方 → 你的 API endpoint（單向推送）</td></tr>
-      <tr><td><b>即時性</b></td><td>取決於 polling 頻率（有延遲）</td><td>事件發生即時通知</td></tr>
-      <tr><td><b>資源消耗</b></td><td>反覆 polling 浪費資源（大部分回應沒變化）</td><td>只在有事件時才有流量</td></tr>
+      <tr><td><b>誰發起 request</b></td><td>你的程式主動 call 對方的 REST API</td><td>對方系統主動 POST 到你的 endpoint</td></tr>
+      <tr><td><b>通訊方向</b></td><td>你 → 對方 API（Request/Response）</td><td>對方 → 你的 endpoint（事件驅動推送）</td></tr>
+      <tr><td><b>即時性</b></td><td>Polling 時取決於頻率（有延遲）；On-demand 則是即時但需手動觸發</td><td>事件發生即時通知</td></tr>
+      <tr><td><b>資源消耗</b></td><td>Polling 會反覆呼叫浪費資源；On-demand 按需呼叫則不會</td><td>只在有事件時才有流量</td></tr>
       <tr><td><b>你需要提供</b></td><td>API Key / Token（呼叫對方 API）</td><td>一個公開可接收的 HTTP endpoint</td></tr>
       <tr><td><b>錯誤處理</b></td><td>直接看 response status code</td><td>需自建 retry / 冪等機制</td></tr>
-      <tr><td><b>底層實作</b></td><td>HTTP API call（GET / POST）</td><td>HTTP API call（POST）— 一樣是 API</td></tr>
+      <tr><td><b>底層實作</b></td><td>HTTP call（GET / POST）</td><td>HTTP POST — 底層同樣是 HTTP</td></tr>
     </tbody>
   </table>
   <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 20px;">
@@ -533,16 +533,16 @@
 <div class="slide" data-slide="4">
 <div class="slide-inner">
   <div class="slide-label">基礎範例 — 互動模擬</div>
-  <h2>親自體驗 Polling vs Webhook</h2>
+  <h2>親自體驗 Pull vs Push</h2>
   <div class="two-col">
     <div class="demo-area">
-      <h3 class="highlight-api">🔄 Polling：主動查詢訂單 API</h3>
-      <p style="font-size:13px; margin:8px 0 14px;">你每次都要「主動發 API call」才能拿到最新狀態</p>
+      <h3 class="highlight-api">🔄 Pull（REST API）：主動查詢訂單</h3>
+      <p style="font-size:13px; margin:8px 0 14px;">你每次都要「主動發 REST API call」才能拿到最新狀態</p>
       <button class="demo-btn" onclick="demoApiCall()">發送 GET /orders/123</button>
       <div class="demo-log" id="apiLog"><span class="log-dim">// 點擊按鈕發送 API request...</span></div>
     </div>
     <div class="demo-area">
-      <h3 class="highlight-wh">🪝 Webhook：等待訂單狀態推送</h3>
+      <h3 class="highlight-wh">🪝 Push（Webhook）：等待訂單狀態推送</h3>
       <p style="font-size:13px; margin:8px 0 14px;">你的 endpoint 等著接收，事件發生時對方自動 POST 過來</p>
       <button class="demo-btn wh-btn" onclick="demoWebhook()">模擬：訂單狀態改變</button>
       <div class="demo-log" id="whLog"><span class="log-dim">// 你的 endpoint 監聽中... 等待推送...</span></div>
@@ -556,10 +556,10 @@
 <div class="slide-inner">
   <div class="slide-label">Datadog 實戰</div>
   <h2>在 <span class="highlight-dd">Datadog</span> 裡的兩種模式</h2>
-  <p style="margin-bottom:20px;">Datadog 同時提供 API（讓你主動查詢/操作）和 Webhook（讓 Datadog 主動通知你）。</p>
+  <p style="margin-bottom:20px;">Datadog 同時提供 REST API（讓你主動 Pull 資料）和 Webhook（讓 Datadog 主動 Push 通知你）。</p>
   <div class="compare-grid">
     <div class="compare-card api-card">
-      <h3><span class="highlight-api">呼叫 Datadog API（Polling）</span></h3>
+      <h3><span class="highlight-api">呼叫 Datadog REST API（Pull）</span></h3>
       <p style="color:var(--text); font-weight:500;">你主動向 Datadog 發 request</p>
       <ul>
         <li>查詢 monitor 狀態</li>
@@ -576,7 +576,7 @@
       </div>
     </div>
     <div class="compare-card wh-card">
-      <h3><span class="highlight-wh">Datadog Webhook（事件推送）</span></h3>
+      <h3><span class="highlight-wh">Datadog Push（Webhook）</span></h3>
       <p style="color:var(--text); font-weight:500;">Datadog 主動 POST 到你的 endpoint</p>
       <ul>
         <li>Monitor 觸發 alert 時自動通知</li>
@@ -600,7 +600,7 @@
 <div class="slide" data-slide="6">
 <div class="slide-inner">
   <div class="slide-label">Datadog API 範例</div>
-  <h2><span class="highlight-api">Polling</span>：主動呼叫 Datadog API 查詢 Monitor</h2>
+  <h2><span class="highlight-api">Pull（REST API）</span>：主動呼叫 Datadog API 查詢 Monitor</h2>
   <div class="diagram">
     <div class="d-box api-box"><div class="icon">🖥️</div><div class="label">你的 Script</div><div class="sub">cron / 手動</div></div>
     <div class="d-arrow"><div class="arrow-label">GET /api/v1/monitor/{id}</div>→</div>
@@ -622,7 +622,7 @@
     &nbsp;&nbsp;<span class="code-key">"query"</span>: <span class="code-str">"avg(last_5m):avg:system.cpu.user{*} > 90"</span><br>
     }
   </div>
-  <p class="mt-sm">重點：<span class="highlight-acc">你決定什麼時候查、查什麼</span>。適合排程報表、批次操作、on-demand 查詢。</p>
+  <p class="mt-sm">重點：<span class="highlight-acc">你決定什麼時候查、查什麼</span>。適合排程報表（定期 polling）、批次操作、on-demand 查詢。</p>
 </div>
 </div>
 
@@ -630,7 +630,7 @@
 <div class="slide" data-slide="7">
 <div class="slide-inner">
   <div class="slide-label">Datadog Webhook 範例</div>
-  <h2><span class="highlight-wh">Webhook</span>：Datadog 主動 POST 到你的 Endpoint</h2>
+  <h2><span class="highlight-wh">Push（Webhook）</span>：Datadog 主動 POST 到你的 Endpoint</h2>
   <div class="diagram">
     <div class="d-box wh-box"><div class="icon">🔥</div><div class="label">Monitor 觸發</div><div class="sub">CPU > 90%</div></div>
     <div class="d-arrow"><div class="arrow-label">自動 POST</div>→</div>
@@ -668,7 +668,7 @@
       </div>
     </div>
   </div>
-  <p class="mt-sm">重點：<span class="highlight-acc">Datadog 自動 POST 到你的 endpoint — 你的 endpoint 本質上也是一個 API</span>。你不用 polling，事件來了就收到。</p>
+  <p class="mt-sm">重點：<span class="highlight-acc">Datadog 自動 POST 到你的 endpoint（Push 模式）</span>。你不需要定期輪詢，事件發生時自動收到通知。</p>
 </div>
 </div>
 
@@ -676,17 +676,17 @@
 <div class="slide" data-slide="8">
 <div class="slide-inner">
   <div class="slide-label">Datadog 互動模擬</div>
-  <h2>實際體驗 <span class="highlight-dd">Datadog</span> 的 Polling vs Webhook</h2>
+  <h2>實際體驗 <span class="highlight-dd">Datadog</span> 的 Pull vs Push</h2>
   <div class="two-col">
     <div class="demo-area">
-      <h3 class="highlight-api">🔄 Polling Datadog API</h3>
-      <p style="font-size:13px; margin:6px 0 14px;">你主動呼叫 API 查詢 monitor 狀態</p>
+      <h3 class="highlight-api">🔄 Pull：Datadog REST API</h3>
+      <p style="font-size:13px; margin:6px 0 14px;">你主動呼叫 REST API 查詢 monitor 狀態</p>
       <button class="demo-btn dd-btn" onclick="demoDdApi()">GET /api/v1/monitor/12345</button>
       <div class="demo-log" id="ddApiLog"><span class="log-dim">// 準備發送 API request...</span></div>
     </div>
     <div class="demo-area">
-      <h3 class="highlight-wh">🪝 Datadog Webhook</h3>
-      <p style="font-size:13px; margin:6px 0 14px;">Monitor Alert 自動觸發</p>
+      <h3 class="highlight-wh">🪝 Push：Datadog Webhook</h3>
+      <p style="font-size:13px; margin:6px 0 14px;">Monitor Alert 觸發時自動 Push 通知</p>
       <button class="demo-btn wh-btn" onclick="demoDdWebhook()">模擬：CPU Alert 觸發</button>
       <div class="demo-log" id="ddWhLog"><span class="log-dim">// 監聽 POST /webhook/datadog ...</span></div>
     </div>
@@ -701,7 +701,7 @@
   <h2>什麼時候該用哪個？</h2>
   <div class="compare-grid">
     <div class="compare-card api-card">
-      <h3><span class="highlight-api">Polling API 的場景</span></h3>
+      <h3><span class="highlight-api">Pull（REST API）的場景</span></h3>
       <ul>
         <li>定時產生報表（每日 monitor 狀態彙整）</li>
         <li>批次操作（建立 / 更新多個 monitor）</li>
@@ -711,7 +711,7 @@
       </ul>
     </div>
     <div class="compare-card wh-card">
-      <h3><span class="highlight-wh">Webhook 推送的場景</span></h3>
+      <h3><span class="highlight-wh">Push（Webhook）的場景</span></h3>
       <ul>
         <li>Alert 即時通知（Slack / Teams / PagerDuty）</li>
         <li>自動建立 incident ticket（Jira / ServiceNow）</li>
@@ -735,23 +735,23 @@
 <div class="slide-inner" style="text-align:center;">
   <div class="slide-label">總結</div>
   <h1 style="font-size:38px;">
-    <span class="highlight-api">Polling</span> = 你主動 call API &nbsp;|&nbsp; <span class="highlight-wh">Webhook</span> = 對方 call 你的 API
+    <span class="highlight-api">Pull</span> = 你主動 call REST API &nbsp;|&nbsp; <span class="highlight-wh">Push</span> = 對方 call 你的 endpoint（Webhook）
   </h1>
   <p style="font-size:15px; color:var(--text); margin:16px auto 24px; max-width:650px;">
-    兩者底層都是 HTTP API call，差別只在<span class="highlight-acc">誰主動發起 request</span>。
+    兩者底層都是 HTTP，差別只在<span class="highlight-acc">誰主動發起 request</span>。
   </p>
   <div style="max-width:650px; margin:0 auto;">
     <table class="comp-table" style="text-align:center;">
-      <tr><th></th><th class="th-api">🔄 Polling</th><th class="th-wh">🪝 Webhook</th></tr>
+      <tr><th></th><th class="th-api">🔄 Pull（REST API）</th><th class="th-wh">🪝 Push（Webhook）</th></tr>
       <tr><td>主動方</td><td>你（Client）</td><td>對方（Server）</td></tr>
-      <tr><td>觸發</td><td>你的 request / 排程</td><td>事件發生</td></tr>
+      <tr><td>觸發</td><td>你的 request（on-demand 或排程 polling）</td><td>事件發生時自動</td></tr>
       <tr><td>你需要</td><td>對方的 API Key</td><td>你自己的 Endpoint URL</td></tr>
-      <tr><td>即時性</td><td>⚠️ 取決於 polling 頻率</td><td>✅ 即時</td></tr>
-      <tr><td>底層技術</td><td>HTTP API</td><td>HTTP API（一樣的）</td></tr>
+      <tr><td>即時性</td><td>⚠️ Polling 有延遲；on-demand 即時但需手動</td><td>✅ 即時</td></tr>
+      <tr><td>底層技術</td><td>HTTP（GET / POST）</td><td>HTTP POST（底層相同）</td></tr>
     </table>
   </div>
   <p style="font-size:15px; color:var(--text-dim); margin-top:20px;">
-    在 Datadog 中：<span class="highlight-api">Polling API</span> 查資料、管設定 &nbsp;/&nbsp; <span class="highlight-wh">Webhook</span> 接收即時告警通知<br>
+    在 Datadog 中：<span class="highlight-api">Pull（REST API）</span> 查資料、管設定 &nbsp;/&nbsp; <span class="highlight-wh">Push（Webhook）</span> 接收即時告警通知<br>
     <span style="font-size:13px;">兩者經常搭配：Webhook 即時通知 → 再用 API 查更多細節</span>
   </p>
 </div>
