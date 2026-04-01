@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polling vs Webhook — 互動式講解</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --text-dim: #8888a0;
+    --api-color: #4ecdc4;
+    --api-glow: #4ecdc440;
+    --webhook-color: #ff6b9d;
+    --webhook-glow: #ff6b9d40;
+    --accent: #ffd93d;
+    --code-bg: #0d0d15;
+    --dd-purple: #632ca6;
+    --dd-purple-glow: #632ca640;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans TC', 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ── Navigation ── */
+  .nav {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    z-index: 100;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    padding: 8px 20px;
+    backdrop-filter: blur(20px);
+  }
+  .nav button {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav button:hover { background: var(--surface2); border-color: var(--api-color); }
+  .nav button:disabled { opacity: .3; cursor: default; border-color: var(--border); background: none; }
+  .slide-counter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+    min-width: 60px;
+    text-align: center;
+  }
+
+  /* ── Progress bar ── */
+  .progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--api-color), var(--webhook-color));
+    transition: width .4s ease;
+    z-index: 100;
+  }
+
+  /* ── Slides container ── */
+  .slides-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+  }
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 80px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .5s ease, transform .5s ease;
+    transform: translateX(40px);
+  }
+  .slide.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+  .slide.exit {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  .slide-inner {
+    max-width: 1100px;
+    width: 100%;
+  }
+
+  /* ── Typography ── */
+  .slide-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 52px;
+    font-weight: 900;
+    line-height: 1.15;
+    margin-bottom: 20px;
+  }
+  h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+  h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  p, li {
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--text-dim);
+  }
+  .highlight-api { color: var(--api-color); }
+  .highlight-wh { color: var(--webhook-color); }
+  .highlight-dd { color: var(--dd-purple); filter: brightness(1.6); }
+  .highlight-acc { color: var(--accent); }
+
+  /* ── Diagram boxes ── */
+  .diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 30px 0;
+    flex-wrap: wrap;
+  }
+  .d-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 24px;
+    text-align: center;
+    min-width: 120px;
+    position: relative;
+  }
+  .d-box.api-box { border-color: var(--api-color); box-shadow: 0 0 20px var(--api-glow); }
+  .d-box.wh-box { border-color: var(--webhook-color); box-shadow: 0 0 20px var(--webhook-glow); }
+  .d-box.dd-box { border-color: var(--dd-purple); box-shadow: 0 0 20px var(--dd-purple-glow); }
+  .d-box .icon { font-size: 28px; margin-bottom: 6px; }
+  .d-box .label { font-size: 13px; font-weight: 600; }
+  .d-box .sub { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+  .d-arrow {
+    font-size: 24px;
+    color: var(--text-dim);
+    padding: 0 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .d-arrow .arrow-label {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  /* ── Comparison grid ── */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin: 24px 0;
+  }
+  .compare-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    transition: transform .2s;
+  }
+  .compare-card:hover { transform: translateY(-2px); }
+  .compare-card.api-card { border-top: 3px solid var(--api-color); }
+  .compare-card.wh-card { border-top: 3px solid var(--webhook-color); }
+  .compare-card h3 { display: flex; align-items: center; gap: 10px; }
+  .compare-card ul { list-style: none; margin-top: 12px; }
+  .compare-card li {
+    padding: 6px 0;
+    padding-left: 20px;
+    position: relative;
+    font-size: 14px;
+  }
+  .compare-card li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--text-dim);
+  }
+
+  /* ── Code block ── */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.8;
+    overflow-x: auto;
+    margin: 16px 0;
+    position: relative;
+  }
+  .code-block .code-label {
+    position: absolute;
+    top: 8px; right: 12px;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .code-comment { color: #5a5a7a; }
+  .code-key { color: var(--api-color); }
+  .code-str { color: var(--accent); }
+  .code-method { color: var(--webhook-color); }
+  .code-url { color: #88aaff; }
+
+  /* ── Table ── */
+  .comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 14px;
+  }
+  .comp-table th {
+    text-align: left;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: .5px;
+  }
+  .comp-table td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dim);
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  .comp-table tr:hover td { background: var(--surface); }
+  .th-api { color: var(--api-color); }
+  .th-wh { color: var(--webhook-color); }
+
+  /* ── Interactive demo ── */
+  .demo-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin: 20px 0;
+  }
+  .demo-btn {
+    background: linear-gradient(135deg, var(--api-color), #3ba89f);
+    border: none;
+    color: var(--bg);
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    transition: all .2s;
+  }
+  .demo-btn:hover { transform: scale(1.03); filter: brightness(1.1); }
+  .demo-btn.wh-btn { background: linear-gradient(135deg, var(--webhook-color), #d4527d); }
+  .demo-btn.dd-btn { background: linear-gradient(135deg, var(--dd-purple), #8844cc); color: #fff; }
+
+  .demo-log {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-top: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    max-height: 200px;
+    overflow-y: auto;
+    min-height: 60px;
+  }
+  .log-line { opacity: 0; animation: fadeIn .3s forwards; }
+  @keyframes fadeIn { to { opacity: 1; } }
+  .log-req { color: var(--api-color); }
+  .log-res { color: var(--accent); }
+  .log-push { color: var(--webhook-color); }
+  .log-dim { color: #5a5a7a; }
+  .log-ok { color: #5cdb5c; }
+
+  /* ── Flex utils ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start; }
+  .mt-sm { margin-top: 12px; }
+  .mt-md { margin-top: 20px; }
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-right: 6px;
+  }
+  .tag-api { background: var(--api-glow); color: var(--api-color); border: 1px solid var(--api-color); }
+  .tag-wh { background: var(--webhook-glow); color: var(--webhook-color); border: 1px solid var(--webhook-color); }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .slide { padding: 40px 28px; }
+    h1 { font-size: 34px; }
+    h2 { font-size: 26px; }
+    .two-col, .compare-grid { grid-template-columns: 1fr; }
+    .diagram { flex-direction: column; }
+    .d-arrow { transform: rotate(90deg); padding: 6px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- SLIDES                                   -->
+<!-- ════════════════════════════════════════ -->
+<div class="slides-wrapper" id="slidesWrapper">
+
+<!-- ──── SLIDE 1: Title ──── -->
+<div class="slide active" data-slide="0">
+<div class="slide-inner" style="text-align:center;">
+  <div class="slide-label">互動式技術講解</div>
+  <h1>
+    <span class="highlight-api">Polling</span> vs <span class="highlight-wh">Webhook</span>
+  </h1>
+  <p style="font-size:18px; max-width:600px; margin:0 auto;">
+    兩種透過 API 取得資料的模式<br>從基本概念到 Datadog 實戰範例
+  </p>
+  <div style="margin-top:30px;">
+    <span class="tag tag-api">PULL — 主動輪詢</span>
+    <span class="tag tag-wh">PUSH — 事件推送</span>
+  </div>
+  <p style="font-size:13px; margin-top:16px; color:var(--text-dim); max-width:520px; margin-left:auto; margin-right:auto;">
+    ⚠️ Webhook 不是 API 的相反。Webhook 本身就是透過 HTTP API 實現的。<br>
+    真正的差別是「誰主動發起 request」。
+  </p>
+  <p style="font-size:13px; margin-top:30px; color:#555;">按右方向鍵 → 或下方按鈕開始</p>
+</div>
+</div>
+
+<!-- ──── SLIDE 2: One-liner ──── -->
+<div class="slide" data-slide="1">
+<div class="slide-inner">
+  <div class="slide-label">先搞清楚一件事</div>
+  <h2>Webhook ≠ API 的反義詞</h2>
+  <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; margin:20px 0;">
+    <p style="color:var(--text); font-size:16px; line-height:1.8;">
+      <span class="highlight-acc">API</span> 是一套介面規範，定義了系統之間如何溝通（透過 HTTP request/response）。<br>
+      <span class="highlight-wh">Webhook</span> 是一種設計模式，讓系統在事件發生時，自動呼叫你預先註冊的 URL。<br><br>
+      Webhook 的實作方式就是發送一個 HTTP POST request — <span class="highlight-acc">它本身就是透過 API 來實現的</span>。<br>
+      所以真正該比較的是：<b>Polling（輪詢）</b> vs <b>Webhook（事件推送）</b>，兩者都使用 API。
+    </p>
+  </div>
+  <div class="compare-grid">
+    <div class="compare-card api-card">
+      <h3><span class="highlight-api">🔄 Polling（輪詢）</span></h3>
+      <p style="font-size:20px; color:var(--text); font-weight:500; margin:12px 0;">
+        「你主動、重複地去問」
+      </p>
+      <p>你的程式定期呼叫 API 檢查有沒有新資料。<br>像你每 5 分鐘打電話給餐廳問：「外送到了嗎？」</p>
+      <div class="tag tag-api" style="margin-top:14px;">PULL 模式 · 你發起 API call</div>
+    </div>
+    <div class="compare-card wh-card">
+      <h3><span class="highlight-wh">🪝 Webhook（事件推送）</span></h3>
+      <p style="font-size:20px; color:var(--text); font-weight:500; margin:12px 0;">
+        「對方主動通知你」
+      </p>
+      <p>你提供一個 endpoint URL，對方在事件發生時自動 POST 過來。<br>像外送 App 主動推播：「餐點已送達」</p>
+      <div class="tag tag-wh" style="margin-top:14px;">PUSH 模式 · 對方發起 API call</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ──── SLIDE 3: Architecture Diagram ──── -->
+<div class="slide" data-slide="2">
+<div class="slide-inner">
+  <div class="slide-label">架構比較</div>
+  <h2 style="margin-bottom:10px;">兩種模式，都是 HTTP API</h2>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+    <!-- LEFT: Polling -->
+    <div style="background:var(--surface); border:1px solid var(--api-color); border-radius:12px; padding:14px 18px;">
+      <p style="margin-bottom:6px; font-size:14px;"><span class="highlight-api">▎Polling — 你主動呼叫 API</span></p>
+      <div class="diagram" style="margin:6px 0 0;">
+        <div class="d-box api-box" style="padding:10px 14px;"><div class="icon" style="font-size:20px;">🖥️</div><div class="label" style="font-size:11px;">你的應用</div></div>
+        <div class="d-arrow" style="padding:0 6px; font-size:18px;"><div class="arrow-label" style="color:var(--api-color); font-size:9px;">① Request</div><span style="color:var(--api-color);">→</span></div>
+        <div class="d-box api-box" style="padding:10px 14px;"><div class="icon" style="font-size:20px;">🌐</div><div class="label" style="font-size:11px;">外部 API</div></div>
+      </div>
+      <div class="code-block" style="font-size:10.5px; margin:6px 0; padding:8px 12px;">
+        <span class="code-method">GET</span> <span class="code-url">/api/orders/123</span><br>
+        <span class="code-key">Auth</span>: Bearer <span class="code-str">your-api-key</span>
+      </div>
+      <div class="diagram" style="margin:0;">
+        <div class="d-box api-box" style="padding:10px 14px;"><div class="icon" style="font-size:20px;">🖥️</div><div class="label" style="font-size:11px;">你的應用</div></div>
+        <div class="d-arrow" style="padding:0 6px; font-size:18px;"><div class="arrow-label" style="color:var(--accent); font-size:9px;">② Response</div><span style="color:var(--accent);">←</span></div>
+        <div class="d-box api-box" style="padding:10px 14px;"><div class="icon" style="font-size:20px;">🌐</div><div class="label" style="font-size:11px;">外部 API</div></div>
+      </div>
+      <div class="code-block" style="font-size:10.5px; margin:6px 0 0; padding:8px 12px;">
+        <span class="log-res">200 OK</span><br>
+        { <span class="code-key">"order_id"</span>: <span class="code-str">"123"</span>, <span class="code-key">"status"</span>: <span class="code-str">"delivering"</span>, <span class="code-key">"eta"</span>: <span class="code-str">"15min"</span> }
+      </div>
+    </div>
+
+    <!-- RIGHT: Webhook -->
+    <div style="background:var(--surface); border:1px solid var(--webhook-color); border-radius:12px; padding:14px 18px;">
+      <p style="margin-bottom:6px; font-size:14px;"><span class="highlight-wh">▎Webhook — 對方主動呼叫你的 API</span></p>
+      <div class="diagram" style="margin:6px 0 0;">
+        <div class="d-box wh-box" style="padding:10px 14px;"><div class="icon" style="font-size:20px;">⚡</div><div class="label" style="font-size:11px;">事件觸發</div></div>
+        <div class="d-arrow" style="padding:0 6px; font-size:18px;"><div class="arrow-label" style="color:var(--webhook-color); font-size:9px;">① POST</div><span style="color:var(--webhook-color);">→</span></div>
+        <div class="d-box wh-box" style="padding:10px 14px;"><div class="icon" style="font-size:20px;">🖥️</div><div class="label" style="font-size:11px;">你的 Endpoint</div></div>
+      </div>
+      <div class="code-block" style="font-size:10.5px; margin:6px 0; padding:8px 12px;">
+        <span class="code-method">POST</span> <span class="code-url">/webhook/orders</span><br>
+        { <span class="code-key">"event"</span>: <span class="code-str">"order.delivered"</span>, <span class="code-key">"order_id"</span>: <span class="code-str">"123"</span> }
+      </div>
+      <div class="diagram" style="margin:0;">
+        <div class="d-box wh-box" style="padding:10px 14px;"><div class="icon" style="font-size:20px;">⚡</div><div class="label" style="font-size:11px;">外部服務</div></div>
+        <div class="d-arrow" style="padding:0 6px; font-size:18px;"><div class="arrow-label" style="color:var(--accent); font-size:9px;">② Response</div><span style="color:var(--accent);">←</span></div>
+        <div class="d-box wh-box" style="padding:10px 14px;"><div class="icon" style="font-size:20px;">🖥️</div><div class="label" style="font-size:11px;">你的 Endpoint</div></div>
+      </div>
+      <div class="code-block" style="font-size:10.5px; margin:6px 0 0; padding:8px 12px;">
+        <span class="log-ok">200 OK</span> <span class="code-comment">← 回覆 200 確認收到（否則 retry）</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 18px; margin-top:12px;">
+    <p style="font-size:13px; color:var(--text);">
+      💡 兩種模式都有 Request → Response 的完整來回。差別是<span class="highlight-acc">誰主動發起第一個 request</span>：Polling 是你發、Webhook 是對方發。
+    </p>
+  </div>
+</div>
+</div>
+
+<!-- ──── SLIDE 4: Comparison Table ──── -->
+<div class="slide" data-slide="3">
+<div class="slide-inner">
+  <div class="slide-label">詳細比較</div>
+  <h2>Polling vs Webhook 差異一覽</h2>
+  <table class="comp-table">
+    <thead>
+      <tr><th style="width:18%;">面向</th><th class="th-api" style="width:41%;">🔄 Polling（主動輪詢 API）</th><th class="th-wh">🪝 Webhook（事件推送）</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><b>誰發起 request</b></td><td>你的程式主動 call API</td><td>對方系統主動 POST 到你的 endpoint</td></tr>
+      <tr><td><b>通訊方向</b></td><td>你 → 對方 API（Request/Response）</td><td>對方 → 你的 API endpoint（單向推送）</td></tr>
+      <tr><td><b>即時性</b></td><td>取決於 polling 頻率（有延遲）</td><td>事件發生即時通知</td></tr>
+      <tr><td><b>資源消耗</b></td><td>反覆 polling 浪費資源（大部分回應沒變化）</td><td>只在有事件時才有流量</td></tr>
+      <tr><td><b>你需要提供</b></td><td>API Key / Token（呼叫對方 API）</td><td>一個公開可接收的 HTTP endpoint</td></tr>
+      <tr><td><b>錯誤處理</b></td><td>直接看 response status code</td><td>需自建 retry / 冪等機制</td></tr>
+      <tr><td><b>底層實作</b></td><td>HTTP API call（GET / POST）</td><td>HTTP API call（POST）— 一樣是 API</td></tr>
+    </tbody>
+  </table>
+  <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 20px;">
+    <p style="font-size:13px; color:var(--text);">
+      📌 最後一行是重點：兩者的底層技術都是 HTTP API call，只是主動權不同。
+    </p>
+  </div>
+</div>
+</div>
+
+<!-- ──── SLIDE 5: Basic Example — Interactive ──── -->
+<div class="slide" data-slide="4">
+<div class="slide-inner">
+  <div class="slide-label">基礎範例 — 互動模擬</div>
+  <h2>親自體驗 Polling vs Webhook</h2>
+  <div class="two-col">
+    <div class="demo-area">
+      <h3 class="highlight-api">🔄 Polling：主動查詢訂單 API</h3>
+      <p style="font-size:13px; margin:8px 0 14px;">你每次都要「主動發 API call」才能拿到最新狀態</p>
+      <button class="demo-btn" onclick="demoApiCall()">發送 GET /orders/123</button>
+      <div class="demo-log" id="apiLog"><span class="log-dim">// 點擊按鈕發送 API request...</span></div>
+    </div>
+    <div class="demo-area">
+      <h3 class="highlight-wh">🪝 Webhook：等待訂單狀態推送</h3>
+      <p style="font-size:13px; margin:8px 0 14px;">你的 endpoint 等著接收，事件發生時對方自動 POST 過來</p>
+      <button class="demo-btn wh-btn" onclick="demoWebhook()">模擬：訂單狀態改變</button>
+      <div class="demo-log" id="whLog"><span class="log-dim">// 你的 endpoint 監聽中... 等待推送...</span></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ──── SLIDE 6: Datadog Context ──── -->
+<div class="slide" data-slide="5">
+<div class="slide-inner">
+  <div class="slide-label">Datadog 實戰</div>
+  <h2>在 <span class="highlight-dd">Datadog</span> 裡的兩種模式</h2>
+  <p style="margin-bottom:20px;">Datadog 同時提供 API（讓你主動查詢/操作）和 Webhook（讓 Datadog 主動通知你）。</p>
+  <div class="compare-grid">
+    <div class="compare-card api-card">
+      <h3><span class="highlight-api">呼叫 Datadog API（Polling）</span></h3>
+      <p style="color:var(--text); font-weight:500;">你主動向 Datadog 發 request</p>
+      <ul>
+        <li>查詢 monitor 狀態</li>
+        <li>建立 / 更新 dashboard</li>
+        <li>取得 metrics 資料</li>
+        <li>管理 downtime</li>
+        <li>提交自定義 event</li>
+      </ul>
+      <div class="code-block mt-sm" style="font-size:11px;">
+        <span class="code-comment"># 你 → Datadog API</span><br>
+        <span class="code-method">GET</span> <span class="code-url">api.datadoghq.com/api/v1/monitor/12345</span><br>
+        <span class="code-comment"># Datadog → 你（response）</span><br>
+        <span class="code-str">{ "status": "Alert", "name": "CPU High" }</span>
+      </div>
+    </div>
+    <div class="compare-card wh-card">
+      <h3><span class="highlight-wh">Datadog Webhook（事件推送）</span></h3>
+      <p style="color:var(--text); font-weight:500;">Datadog 主動 POST 到你的 endpoint</p>
+      <ul>
+        <li>Monitor 觸發 alert 時自動通知</li>
+        <li>推送告警到 Slack / PagerDuty / 自建系統</li>
+        <li>觸發自動化修復流程</li>
+        <li>同步告警到第三方 ITSM</li>
+        <li>整合 ChatOps 工作流</li>
+      </ul>
+      <div class="code-block mt-sm" style="font-size:11px;">
+        <span class="code-comment"># Datadog → 你的 endpoint（也是一個 API）</span><br>
+        <span class="code-method">POST</span> <span class="code-url">your-server.com/webhook/datadog</span><br>
+        <span class="code-comment"># Payload（自動推送）</span><br>
+        <span class="code-str">{ "alert_type": "error", "title": "CPU &gt; 90%" }</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ──── SLIDE 7: Datadog API Example ──── -->
+<div class="slide" data-slide="6">
+<div class="slide-inner">
+  <div class="slide-label">Datadog API 範例</div>
+  <h2><span class="highlight-api">Polling</span>：主動呼叫 Datadog API 查詢 Monitor</h2>
+  <div class="diagram">
+    <div class="d-box api-box"><div class="icon">🖥️</div><div class="label">你的 Script</div><div class="sub">cron / 手動</div></div>
+    <div class="d-arrow"><div class="arrow-label">GET /api/v1/monitor/{id}</div>→</div>
+    <div class="d-box dd-box"><div class="icon">🐶</div><div class="label">Datadog API</div><div class="sub">api.datadoghq.com</div></div>
+    <div class="d-arrow"><div class="arrow-label">JSON Response</div>←</div>
+    <div class="d-box api-box"><div class="icon">📊</div><div class="label">處理資料</div><div class="sub">Dashboard / Report</div></div>
+  </div>
+  <div class="code-block">
+    <div class="code-label">CURL</div>
+    <span class="code-comment"># 用 API Key + App Key 認證，主動查詢 monitor</span><br>
+    <span class="code-method">curl</span> -X GET <span class="code-url">"https://api.datadoghq.com/api/v1/monitor/12345"</span> \<br>
+    &nbsp;&nbsp;-H <span class="code-str">"DD-API-KEY: ${DD_API_KEY}"</span> \<br>
+    &nbsp;&nbsp;-H <span class="code-str">"DD-APPLICATION-KEY: ${DD_APP_KEY}"</span><br><br>
+    <span class="code-comment"># Response（你拿到的資料）</span><br>
+    {<br>
+    &nbsp;&nbsp;<span class="code-key">"id"</span>: 12345,<br>
+    &nbsp;&nbsp;<span class="code-key">"name"</span>: <span class="code-str">"[Web] High CPU Usage"</span>,<br>
+    &nbsp;&nbsp;<span class="code-key">"overall_state"</span>: <span class="code-str">"Alert"</span>,<br>
+    &nbsp;&nbsp;<span class="code-key">"query"</span>: <span class="code-str">"avg(last_5m):avg:system.cpu.user{*} > 90"</span><br>
+    }
+  </div>
+  <p class="mt-sm">重點：<span class="highlight-acc">你決定什麼時候查、查什麼</span>。適合排程報表、批次操作、on-demand 查詢。</p>
+</div>
+</div>
+
+<!-- ──── SLIDE 8: Datadog Webhook Example ──── -->
+<div class="slide" data-slide="7">
+<div class="slide-inner">
+  <div class="slide-label">Datadog Webhook 範例</div>
+  <h2><span class="highlight-wh">Webhook</span>：Datadog 主動 POST 到你的 Endpoint</h2>
+  <div class="diagram">
+    <div class="d-box wh-box"><div class="icon">🔥</div><div class="label">Monitor 觸發</div><div class="sub">CPU > 90%</div></div>
+    <div class="d-arrow"><div class="arrow-label">自動 POST</div>→</div>
+    <div class="d-box dd-box"><div class="icon">🐶</div><div class="label">Datadog</div><div class="sub">Webhook Integration</div></div>
+    <div class="d-arrow"><div class="arrow-label">HTTP POST</div>→</div>
+    <div class="d-box wh-box"><div class="icon">🖥️</div><div class="label">你的 Server</div><div class="sub">/webhook/datadog</div></div>
+  </div>
+  <div class="two-col">
+    <div>
+      <p style="font-size:13px; color:var(--text); font-weight:500; margin-bottom:8px;">① Datadog Webhook 設定</p>
+      <div class="code-block" style="font-size:11.5px;">
+        <span class="code-comment"># Integrations → Webhooks</span><br>
+        <span class="code-key">Name</span>: my-alert-webhook<br>
+        <span class="code-key">URL</span>: <span class="code-url">https://your-server.com/webhook/datadog</span><br>
+        <span class="code-key">Payload</span>:<br>
+        {<br>
+        &nbsp;&nbsp;<span class="code-key">"title"</span>: <span class="code-str">"$EVENT_TITLE"</span>,<br>
+        &nbsp;&nbsp;<span class="code-key">"alert_type"</span>: <span class="code-str">"$ALERT_TYPE"</span>,<br>
+        &nbsp;&nbsp;<span class="code-key">"host"</span>: <span class="code-str">"$HOSTNAME"</span>,<br>
+        &nbsp;&nbsp;<span class="code-key">"monitor_id"</span>: <span class="code-str">"$ID"</span><br>
+        }
+      </div>
+    </div>
+    <div>
+      <p style="font-size:13px; color:var(--text); font-weight:500; margin-bottom:8px;">② 你的 Server 接收</p>
+      <div class="code-block" style="font-size:11.5px;">
+        <span class="code-comment"># Flask endpoint</span><br>
+        <span class="code-method">@app.route</span>(<span class="code-str">'/webhook/datadog'</span>)<br>
+        <span class="code-key">def</span> handle():<br>
+        &nbsp;&nbsp;data = request.json<br>
+        &nbsp;&nbsp;<span class="code-comment"># 自動收到告警！</span><br>
+        &nbsp;&nbsp;send_slack(data[<span class="code-str">"title"</span>])<br>
+        &nbsp;&nbsp;create_ticket(data)<br>
+        &nbsp;&nbsp;<span class="code-key">return</span> <span class="code-str">"ok"</span>, 200
+      </div>
+    </div>
+  </div>
+  <p class="mt-sm">重點：<span class="highlight-acc">Datadog 自動 POST 到你的 endpoint — 你的 endpoint 本質上也是一個 API</span>。你不用 polling，事件來了就收到。</p>
+</div>
+</div>
+
+<!-- ──── SLIDE 9: Datadog Interactive Demo ──── -->
+<div class="slide" data-slide="8">
+<div class="slide-inner">
+  <div class="slide-label">Datadog 互動模擬</div>
+  <h2>實際體驗 <span class="highlight-dd">Datadog</span> 的 Polling vs Webhook</h2>
+  <div class="two-col">
+    <div class="demo-area">
+      <h3 class="highlight-api">🔄 Polling Datadog API</h3>
+      <p style="font-size:13px; margin:6px 0 14px;">你主動呼叫 API 查詢 monitor 狀態</p>
+      <button class="demo-btn dd-btn" onclick="demoDdApi()">GET /api/v1/monitor/12345</button>
+      <div class="demo-log" id="ddApiLog"><span class="log-dim">// 準備發送 API request...</span></div>
+    </div>
+    <div class="demo-area">
+      <h3 class="highlight-wh">🪝 Datadog Webhook</h3>
+      <p style="font-size:13px; margin:6px 0 14px;">Monitor Alert 自動觸發</p>
+      <button class="demo-btn wh-btn" onclick="demoDdWebhook()">模擬：CPU Alert 觸發</button>
+      <div class="demo-log" id="ddWhLog"><span class="log-dim">// 監聽 POST /webhook/datadog ...</span></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ──── SLIDE 10: When to use which ──── -->
+<div class="slide" data-slide="9">
+<div class="slide-inner">
+  <div class="slide-label">使用場景</div>
+  <h2>什麼時候該用哪個？</h2>
+  <div class="compare-grid">
+    <div class="compare-card api-card">
+      <h3><span class="highlight-api">Polling API 的場景</span></h3>
+      <ul>
+        <li>定時產生報表（每日 monitor 狀態彙整）</li>
+        <li>批次操作（建立 / 更新多個 monitor）</li>
+        <li>查詢歷史 metrics 做分析</li>
+        <li>Terraform / IaC 管理 Datadog 設定</li>
+        <li>需要 on-demand 取得特定資料</li>
+      </ul>
+    </div>
+    <div class="compare-card wh-card">
+      <h3><span class="highlight-wh">Webhook 推送的場景</span></h3>
+      <ul>
+        <li>Alert 即時通知（Slack / Teams / PagerDuty）</li>
+        <li>自動建立 incident ticket（Jira / ServiceNow）</li>
+        <li>觸發自動修復腳本（restart service）</li>
+        <li>同步告警狀態到內部系統</li>
+        <li>ChatOps 工作流整合</li>
+      </ul>
+    </div>
+  </div>
+  <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-top:16px; text-align:center;">
+    <p style="color:var(--text); font-size:15px;">
+      💡 實務上兩者經常<span class="highlight-acc">搭配使用</span>：<br>
+      <span style="font-size:14px; color:var(--text-dim);">Webhook 即時通知 →「收到 alert！」→ 用 API 查詢更多 context →「影響了哪些 host？」</span>
+    </p>
+  </div>
+</div>
+</div>
+
+<!-- ──── SLIDE 11: Summary ──── -->
+<div class="slide" data-slide="10">
+<div class="slide-inner" style="text-align:center;">
+  <div class="slide-label">總結</div>
+  <h1 style="font-size:38px;">
+    <span class="highlight-api">Polling</span> = 你主動 call API &nbsp;|&nbsp; <span class="highlight-wh">Webhook</span> = 對方 call 你的 API
+  </h1>
+  <p style="font-size:15px; color:var(--text); margin:16px auto 24px; max-width:650px;">
+    兩者底層都是 HTTP API call，差別只在<span class="highlight-acc">誰主動發起 request</span>。
+  </p>
+  <div style="max-width:650px; margin:0 auto;">
+    <table class="comp-table" style="text-align:center;">
+      <tr><th></th><th class="th-api">🔄 Polling</th><th class="th-wh">🪝 Webhook</th></tr>
+      <tr><td>主動方</td><td>你（Client）</td><td>對方（Server）</td></tr>
+      <tr><td>觸發</td><td>你的 request / 排程</td><td>事件發生</td></tr>
+      <tr><td>你需要</td><td>對方的 API Key</td><td>你自己的 Endpoint URL</td></tr>
+      <tr><td>即時性</td><td>⚠️ 取決於 polling 頻率</td><td>✅ 即時</td></tr>
+      <tr><td>底層技術</td><td>HTTP API</td><td>HTTP API（一樣的）</td></tr>
+    </table>
+  </div>
+  <p style="font-size:15px; color:var(--text-dim); margin-top:20px;">
+    在 Datadog 中：<span class="highlight-api">Polling API</span> 查資料、管設定 &nbsp;/&nbsp; <span class="highlight-wh">Webhook</span> 接收即時告警通知<br>
+    <span style="font-size:13px;">兩者經常搭配：Webhook 即時通知 → 再用 API 查更多細節</span>
+  </p>
+</div>
+</div>
+
+</div><!-- slides-wrapper -->
+
+<!-- ── Navigation ── -->
+<nav class="nav">
+  <button id="prevBtn" onclick="navigate(-1)" disabled>‹</button>
+  <div class="slide-counter" id="counter">1 / 11</div>
+  <button id="nextBtn" onclick="navigate(1)">›</button>
+</nav>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+
+  function showSlide(n) {
+    slides.forEach((s, i) => {
+      s.classList.remove('active', 'exit');
+      if (i === n) s.classList.add('active');
+      else if (i < n) s.classList.add('exit');
+    });
+    document.getElementById('counter').textContent = `${n + 1} / ${total}`;
+    document.getElementById('prevBtn').disabled = n === 0;
+    document.getElementById('nextBtn').disabled = n === total - 1;
+    document.getElementById('progress').style.width = `${((n + 1) / total) * 100}%`;
+  }
+
+  function navigate(dir) {
+    const next = current + dir;
+    if (next >= 0 && next < total) { current = next; showSlide(current); }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); navigate(1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); navigate(-1); }
+  });
+
+  // ── Demo: Basic API ──
+  let apiCount = 0;
+  function demoApiCall() {
+    const log = document.getElementById('apiLog');
+    if (apiCount === 0) log.innerHTML = '';
+    apiCount++;
+    const ts = new Date().toLocaleTimeString();
+    addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-req">→ GET /api/orders/123</span>`);
+    setTimeout(() => {
+      addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-res">← 200 OK</span> { "status": "delivering", "eta": "15min" }`);
+    }, 600);
+  }
+
+  // ── Demo: Basic Webhook ──
+  let whCount = 0;
+  function demoWebhook() {
+    const log = document.getElementById('whLog');
+    if (whCount === 0) log.innerHTML = '';
+    whCount++;
+    const ts = new Date().toLocaleTimeString();
+    addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-push">⚡ 事件發生：訂單狀態已更新</span>`);
+    setTimeout(() => {
+      addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-push">← POST /your-endpoint</span>`);
+    }, 300);
+    setTimeout(() => {
+      addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-ok">✓ 收到推送</span> { "order": 123, "status": "delivered" }`);
+    }, 700);
+  }
+
+  // ── Demo: Datadog API ──
+  let ddApiCount = 0;
+  function demoDdApi() {
+    const log = document.getElementById('ddApiLog');
+    if (ddApiCount === 0) log.innerHTML = '';
+    ddApiCount++;
+    const ts = new Date().toLocaleTimeString();
+    addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-req">→ GET api.datadoghq.com/api/v1/monitor/12345</span>`);
+    addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-dim">   Headers: DD-API-KEY=***, DD-APPLICATION-KEY=***</span>`);
+    setTimeout(() => {
+      addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-res">← 200 OK</span>`);
+      addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-res">  { "name": "[Web] CPU High", "overall_state": "Alert" }</span>`);
+    }, 800);
+  }
+
+  // ── Demo: Datadog Webhook ──
+  let ddWhCount = 0;
+  function demoDdWebhook() {
+    const log = document.getElementById('ddWhLog');
+    if (ddWhCount === 0) log.innerHTML = '';
+    ddWhCount++;
+    const ts = new Date().toLocaleTimeString();
+    addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-push">🔥 Monitor Triggered: CPU > 90% on web-prod-01</span>`);
+    setTimeout(() => {
+      addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-push">← Datadog POST → your-server.com/webhook/datadog</span>`);
+    }, 400);
+    setTimeout(() => {
+      addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-ok">✓ Payload 收到:</span>`);
+      addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-ok">  { "title": "CPU > 90%", "host": "web-prod-01", "alert_type": "error" }</span>`);
+    }, 900);
+    setTimeout(() => {
+      addLog(log, `<span class="log-dim">[${ts}]</span> <span class="log-ok">→ 自動執行: send_slack() + create_jira_ticket()</span>`);
+    }, 1400);
+  }
+
+  function addLog(el, html) {
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.innerHTML = html;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  showSlide(0);
+</script>
+</body>
+</html>
